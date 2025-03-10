@@ -1,5 +1,19 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Animated, Dimensions, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TextInput, 
+  TouchableOpacity, 
+  Image, 
+  Animated, 
+  Dimensions, 
+  Platform, 
+  KeyboardAvoidingView, 
+  ScrollView,
+  Keyboard,
+  TouchableWithoutFeedback
+} from 'react-native';
 import { Link, router } from 'expo-router';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/store/authStore';
@@ -9,9 +23,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const passwordInputRef = useRef<TextInput>(null);
   
   const { login } = useAuth();
 
@@ -49,113 +65,139 @@ export default function LoginScreen() {
     }
   };
 
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <Image 
-        source={{ uri: 'https://i.imgur.com/PPVM8Hi.png' }}
-        style={styles.backgroundImage}
-      />
-      
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <Animated.View 
-          style={[
-            styles.contentContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
+        <Image 
+          source={{ uri: 'https://i.imgur.com/PPVM8Hi.png' }}
+          style={styles.backgroundImage}
+        />
+        
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Log in to continue your journey</Text>
-          </View>
-          
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-          
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#A0A0A0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#808080"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
+          <Animated.View 
+            style={[
+              styles.contentContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>Welcome back</Text>
+              <Text style={styles.subtitle}>Log in to continue your journey</Text>
             </View>
             
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#A0A0A0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#808080"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+            
+            <View style={styles.formContainer}>
+              <View style={styles.inputContainer}>
+                <Mail size={20} color="#A0A0A0" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor="#808080"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                  editable={!isLoading}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => {
+                    passwordInputRef.current?.focus();
+                  }}
+                  textContentType="emailAddress"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  backgroundColor="transparent"
+                />
+              </View>
+              
+              <View style={styles.inputContainer}>
+                <Lock size={20} color="#A0A0A0" style={styles.inputIcon} />
+                <TextInput
+                  ref={passwordInputRef}
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor="#808080"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!isLoading}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  textContentType="password"
+                  autoComplete="password"
+                  autoCorrect={false}
+                  backgroundColor="transparent"
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#A0A0A0" />
+                  ) : (
+                    <Eye size={20} color="#A0A0A0" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+              
               <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
+                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                onPress={handleLogin}
+                disabled={isLoading}
               >
-                {showPassword ? (
-                  <EyeOff size={20} color="#A0A0A0" />
-                ) : (
-                  <Eye size={20} color="#A0A0A0" />
-                )}
+                <Text style={styles.loginButtonText}>
+                  {isLoading ? 'Logging in...' : 'Log In'}
+                </Text>
               </TouchableOpacity>
             </View>
             
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              <Text style={styles.loginButtonText}>
-                {isLoading ? 'Logging in...' : 'Log In'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <Link href="/register" asChild>
-              <TouchableOpacity>
-                <Text style={styles.signupText}>Sign Up</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </Animated.View>
-      </ScrollView>
-      
-      <View style={styles.progressBar}>
-        <View style={[styles.progressIndicator, { width: '66%' }]} />
-      </View>
-    </KeyboardAvoidingView>
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Link href="/register" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.signupText}>Sign Up</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </Animated.View>
+        </ScrollView>
+        
+        <View style={styles.progressBar}>
+          <View style={[styles.progressIndicator, { width: '66%' }]} />
+        </View>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -182,11 +224,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: '#1E1E1E',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#333333',
   },
   scrollContent: {
     flexGrow: 1,
@@ -230,13 +272,13 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: '#1E1E1E',
     borderRadius: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
     height: 60,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#333333',
   },
   inputIcon: {
     marginRight: 12,
@@ -246,6 +288,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   eyeIcon: {
     padding: 8,

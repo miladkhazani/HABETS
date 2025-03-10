@@ -1,13 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Platform, Image, Dimensions } from 'react-native';
 import { useAuth } from '@/store/authStore';
-import { ChevronLeft, ChevronRight, Calendar, CircleCheck as CheckCircle, Clock, Plus, Trophy, Target, Activity, Flame } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Calendar, CircleCheck as CheckCircle, Clock, Plus, Trophy, Target, Activity, Flame, Bell, Search } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const [selectedDay, setSelectedDay] = useState(3); // 0-6 for days of week
+  const [selectedDay, setSelectedDay] = useState(3);
   
   // Mock data for the weekly progress
   const weeklyProgress = {
@@ -63,18 +63,32 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
+      {/* Fixed Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={{ uri: 'https://i.imgur.com/2JJIsfd.png' }}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerButton}>
+              <Search size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerButton}>
+              <Bell size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+      
       <SafeAreaView style={styles.safeArea}>
         <ScrollView 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Header with Logo */}
-          <View style={styles.headerWithLogo}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>H</Text>
-            </View>
-          </View>
-          
           {/* Date Navigation */}
           <View style={styles.dateNavigation}>
             <TouchableOpacity style={styles.dateArrow}>
@@ -322,31 +336,61 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
   },
-  safeArea: {
-    flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 20 : StatusBar.currentHeight,
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight,
+    paddingBottom: 10,
+    backgroundColor: '#1A1A1A',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  scrollContent: {
-    paddingBottom: 30,
-  },
-  headerWithLogo: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
   logoContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 120,  // Set a fixed width (adjust as needed)
+    height: 40,  // Set a fixed height
+},
+  logoImage: {
+    width: 320,
+    height: 80,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerButton: {
     width: 40,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: '#FF6B00',
+    borderRadius: 20,
+    backgroundColor: '#262626',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoText: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 24,
-    color: '#FFFFFF',
+  safeArea: {
+    flex: 1,
+    marginTop: Platform.OS === 'ios' ? 90 : 70 + (StatusBar.currentHeight || 0),
+  },
+  scrollContent: {
+    paddingBottom: 30,
   },
   dateNavigation: {
     flexDirection: 'row',
@@ -521,6 +565,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    backgroundColor: '#FF4B4B',
   },
   habitContent: {
     flex: 1,
@@ -556,6 +601,7 @@ const styles = StyleSheet.create({
   habitProgressBar: {
     height: 4,
     borderRadius: 2,
+    backgroundColor: '#4361EE',
   },
   habitCheckbox: {
     width: 24,
@@ -571,12 +617,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FF6B00',
+    backgroundColor: '#FF4B4B',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     marginTop: 16,
-    shadowColor: '#FF6B00',
+    shadowColor: '#FF4B4B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
