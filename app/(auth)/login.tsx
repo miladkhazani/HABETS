@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
   
-  const { login, loginWithApple, loginWithGoogle, loginWithX } = useAuth();
+  const { login, loginWithApple, loginWithGoogle } = useAuth();
 
   useEffect(() => {
     Animated.parallel([
@@ -73,7 +73,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSocialLogin = async (provider: 'apple' | 'google' | 'x') => {
+  const handleSocialLogin = async (provider: 'apple' | 'google') => {
     try {
       setIsLoading(true);
       setError(null);
@@ -85,15 +85,22 @@ export default function LoginScreen() {
         case 'google':
           await loginWithGoogle();
           break;
-        case 'x':
-          await loginWithX();
-          break;
       }
       
       router.replace('/(tabs)');
-    } catch (err) {
-      setError(`Failed to login with ${provider}`);
+    } catch (err: any) {
       console.error(`${provider} login error:`, err);
+      if (err.code === '23505' || (err.message && err.message.includes('duplicate key value'))) {
+        // This means the user exists but there was an issue with profile creation
+        // We can safely navigate them since authentication succeeded
+        router.replace('/(tabs)');
+        return;
+      }
+      if (err.code === 'ERR_REQUEST_CANCELED') {
+        // User canceled the sign-in, no need to show error
+        return;
+      }
+      setError(`Failed to login with ${provider}. Please try again.`);
     } finally {
       setIsLoading(false);
     }
@@ -140,12 +147,6 @@ export default function LoginScreen() {
               <Text style={styles.subtitle}>Log in to continue your journey</Text>
             </View>
             
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-            
             <View style={styles.formContainer}>
               <View style={styles.inputContainer}>
                 <Mail size={20} color="#A0A0A0" style={styles.inputIcon} />
@@ -166,7 +167,6 @@ export default function LoginScreen() {
                   textContentType="emailAddress"
                   autoComplete="email"
                   autoCorrect={false}
-                  backgroundColor="transparent"
                 />
               </View>
               
@@ -186,7 +186,6 @@ export default function LoginScreen() {
                   textContentType="password"
                   autoComplete="password"
                   autoCorrect={false}
-                  backgroundColor="transparent"
                 />
                 <TouchableOpacity 
                   onPress={() => setShowPassword(!showPassword)}
@@ -224,37 +223,41 @@ export default function LoginScreen() {
               <View style={styles.socialButtonsContainer}>
                 {Platform.OS === 'ios' && isAppleAuthAvailable && (
                   <TouchableOpacity 
-                    style={styles.socialButton}
+                    style={[styles.socialButton, styles.googleButton]}
                     onPress={() => handleSocialLogin('apple')}
                     disabled={isLoading}
                   >
-                    <Apple size={20} color="#FFFFFF" />
-                    <Text style={styles.socialButtonText}>Apple</Text>
+                    <View style={styles.socialButtonContent}>
+                      <Image 
+                        source={{ uri: 'https://i.imgur.com/FQfTXQ8.png' }}
+                        style={styles.appleIcon}
+                      />
+                      <Text style={styles.socialButtonText}>Apple</Text>
+                    </View>
                   </TouchableOpacity>
                 )}
                 
                 <TouchableOpacity 
-                  style={styles.socialButton}
+                  style={[styles.socialButton, styles.googleButton]}
                   onPress={() => handleSocialLogin('google')}
                   disabled={isLoading}
                 >
-                  <Image 
-                    source={{ uri: 'https://i.imgur.com/O9VfQxe.png' }}
-                    style={styles.googleIcon}
-                  />
-                  <Text style={styles.socialButtonText}>Google</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialLogin('x')}
-                  disabled={isLoading}
-                >
-                  <X size={20} color="#FFFFFF" />
-                  <Text style={styles.socialButtonText}>X</Text>
+                  <View style={styles.socialButtonContent}>
+                    <Image 
+                      source={{ uri: 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png' }}
+                      style={styles.googleIcon}
+                    />
+                    <Text style={styles.socialButtonText}>Google</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
+            
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
             
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
@@ -331,14 +334,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 87, 51, 0.1)',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 87, 51, 0.3)',
+    marginHorizontal: 24,
   },
   errorText: {
     fontFamily: 'Inter-Regular',
     color: '#FF5733',
     fontSize: 14,
+    textAlign: 'center',
   },
   formContainer: {
     marginBottom: 30,
@@ -421,15 +426,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333333',
   },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 24,
+  },
   socialButtonText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
     color: '#FFFFFF',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   googleIcon: {
     width: 20,
     height: 20,
+    marginLeft: -2,
+  },
+  appleIcon: {
+    width: 18,
+    height: 22,
+    tintColor: '#FFFFFF',
+    marginLeft: -2,
   },
   footer: {
     flexDirection: 'row',
@@ -460,5 +478,10 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 2,
+  },
+  googleButton: {
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#333333',
   },
 });

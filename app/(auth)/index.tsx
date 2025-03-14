@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated, Platform } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Trophy, Users, Target, ChevronRight, Apple } from 'lucide-react-native';
 import { useAuth } from '@/store/authStore';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function WelcomeScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(100));
   const { loginWithGoogle, loginWithApple } = useAuth();
+  const router = useRouter();
   
   useEffect(() => {
     Animated.parallel([
@@ -35,7 +37,13 @@ export default function WelcomeScreen() {
   const handleAppleLogin = async () => {
     try {
       await loginWithApple();
-    } catch (err) {
+      if (useAuth.getState().isAuthenticated) {
+        router.replace('/(tabs)');
+      }
+    } catch (err: any) {
+      if (err.code === 'ERR_REQUEST_CANCELED') {
+        return;
+      }
       console.error('Apple login error:', err);
     }
   };
@@ -100,11 +108,14 @@ export default function WelcomeScreen() {
           </Link>
           
           <TouchableOpacity 
-            style={styles.socialButton}
+            style={[styles.socialButton, styles.googleButton]}
             onPress={handleAppleLogin}
           >
             <View style={styles.socialButtonContent}>
-              <Apple size={20} color="#FFFFFF" />
+              <Image 
+                source={{ uri: 'https://i.imgur.com/FQfTXQ8.png' }}
+                style={styles.appleIcon}
+              />
               <Text style={styles.socialButtonText}>Continue with Apple</Text>
             </View>
           </TouchableOpacity>
@@ -245,6 +256,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 24,
   },
   googleButton: {
     backgroundColor: '#1E1E1E',
@@ -257,9 +269,15 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   googleIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
+    width: 20,
+    height: 20,
+    marginLeft: -2,
+  },
+  appleIcon: {
+    width: 18,
+    height: 22,
+    tintColor: '#FFFFFF',
+    marginLeft: -10,
   },
   textButton: {
     paddingVertical: 12,

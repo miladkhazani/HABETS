@@ -80,8 +80,8 @@ export default function RegisterScreen() {
       router.replace('/(tabs)');
     } catch (err: any) {
       console.error('Registration error:', err);
-      if (err.message.includes('already registered')) {
-        setError('This email is already registered');
+      if (err.message.includes('already registered') || err.message.includes('already in use') || err.code === '23505') {
+        setError('An account with this email already exists. Please sign in instead.');
       } else {
         setError('Failed to create account. Please try again.');
       }
@@ -131,12 +131,6 @@ export default function RegisterScreen() {
               <Text style={styles.subtitle}>Join the habit revolution</Text>
             </View>
             
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-            
             <View style={styles.formContainer}>
               <View style={styles.inputContainer}>
                 <User size={20} color="#A0A0A0" style={styles.inputIcon} />
@@ -155,7 +149,6 @@ export default function RegisterScreen() {
                   textContentType="name"
                   autoComplete="name"
                   autoCorrect={false}
-                  backgroundColor="transparent"
                 />
               </View>
               
@@ -178,7 +171,6 @@ export default function RegisterScreen() {
                   textContentType="emailAddress"
                   autoComplete="email"
                   autoCorrect={false}
-                  backgroundColor="transparent"
                 />
               </View>
               
@@ -200,7 +192,6 @@ export default function RegisterScreen() {
                   textContentType="newPassword"
                   autoComplete="password-new"
                   autoCorrect={false}
-                  backgroundColor="transparent"
                 />
                 <TouchableOpacity 
                   onPress={() => setShowPassword(!showPassword)}
@@ -231,7 +222,6 @@ export default function RegisterScreen() {
                   textContentType="newPassword"
                   autoComplete="password-new"
                   autoCorrect={false}
-                  backgroundColor="transparent"
                 />
                 <TouchableOpacity 
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -256,6 +246,12 @@ export default function RegisterScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+            
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
             
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
@@ -328,19 +324,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#E0E0E0',
   },
-  errorContainer: {
-    backgroundColor: 'rgba(255, 87, 51, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 87, 51, 0.3)',
-  },
-  errorText: {
-    fontFamily: 'Inter-Regular',
-    color: '#FF5733',
-    fontSize: 14,
-  },
   formContainer: {
     marginBottom: 30,
   },
@@ -363,7 +346,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#FFFFFF',
-    backgroundColor: 'transparent',
   },
   eyeIcon: {
     padding: 8,
@@ -412,5 +394,20 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 2,
+  },
+  errorContainer: {
+    backgroundColor: 'rgba(255, 87, 51, 0.1)',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 87, 51, 0.3)',
+    marginHorizontal: 24,
+  },
+  errorText: {
+    fontFamily: 'Inter-Regular',
+    color: '#FF5733',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

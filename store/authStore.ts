@@ -11,7 +11,7 @@ export type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 
 interface User {
   id: string;
-  email: string;
+  email?: string;
   user_metadata: {
     full_name?: string;
     avatar_url?: string;
@@ -74,50 +74,33 @@ export const useAuth = create<AuthState>((set, get) => ({
         ],
       });
 
-      console.log('Apple credential received:', {
-        ...credential,
-        identityToken: credential.identityToken ? 'present' : 'missing'
+      if (!credential.identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+
+      // Sign in with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
       });
 
-      if (credential.identityToken) {
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: 'apple',
-          token: credential.identityToken,
-        });
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('No user data received');
 
-        if (error) {
-          console.error('Supabase Apple auth error:', error);
-          throw error;
-        }
-        
-        if (data.user) {
-          const { data: profile } = await supabase
+      // Get or create profile
+      let { data: profile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      // If no profile exists, create one
+      if (!profile) {
+        try {
+          const { data: newProfile } = await supabase
             .from('user_profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-
-          if (!profile) {
-            const { error: profileError } = await supabase
-              .from('user_profiles')
-              .insert([
-                {
-                  id: data.user.id,
-                  full_name: credential.fullName?.givenName 
-                    ? `${credential.fullName.givenName} ${credential.fullName.familyName || ''}`
-                    : null,
-                  username: credential.email?.split('@')[0],
-                  avatar_url: null
-                }
-              ]);
-
-            if (profileError) throw profileError;
-          }
-
-          set({ 
-            user: data.user,
-            profile: profile || {
-              id: data.user.id,
+            .insert({
+              id: authData.user.id,
               full_name: credential.fullName?.givenName 
                 ? `${credential.fullName.givenName} ${credential.fullName.familyName || ''}`
                 : null,
@@ -128,20 +111,42 @@ export const useAuth = create<AuthState>((set, get) => ({
               wins_count: 0,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-            },
-            isAuthenticated: true 
-          });
+            })
+            .select()
+            .single();
+          
+          profile = newProfile;
+        } catch (error) {
+          console.error('Failed to create profile:', error);
+          // If profile creation fails but auth succeeded, still proceed
+          if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') {
+            const { data: existingProfile } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', authData.user.id)
+              .single();
+            profile = existingProfile;
+          }
         }
-      } else {
-        throw new Error('No identity token received from Apple');
       }
-    } catch (error) {
+
+      // Set auth state
+      set({
+        user: authData.user as unknown as User,
+        profile: profile || null,
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+    } catch (error: any) {
       if (error.code === 'ERR_REQUEST_CANCELED') {
         console.log('User canceled Apple sign in');
-      } else {
-        console.error('Apple sign-in error:', error);
-        throw error;
+        set({ isLoading: false }); // Ensure loading state is reset
+        return;
       }
+      console.error('Apple sign-in error:', error);
+      set({ isLoading: false }); // Ensure loading state is reset
+      throw error;
     }
   },
 
@@ -168,7 +173,6 @@ export const useAuth = create<AuthState>((set, get) => ({
             redirectUrl,
             {
               showInRecents: true,
-              preferEphemeral: true,
               dismissButtonStyle: 'close',
             }
           );
@@ -199,7 +203,7 @@ export const useAuth = create<AuthState>((set, get) => ({
               }
 
               set({ 
-                user,
+                user: user as unknown as User,
                 profile: profile || {
                   id: user.id,
                   full_name: user.user_metadata.full_name,
