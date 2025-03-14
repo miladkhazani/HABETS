@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated, Platform } from 'react-native';
 import { Link } from 'expo-router';
-import { Trophy, Users, Target, ChevronRight, Apple, X } from 'lucide-react-native';
+import { Trophy, Users, Target, ChevronRight, Apple } from 'lucide-react-native';
+import { useAuth } from '@/store/authStore';
 
 export default function WelcomeScreen() {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(100));
+  const { loginWithGoogle, loginWithApple } = useAuth();
   
   useEffect(() => {
     Animated.parallel([
@@ -21,6 +23,22 @@ export default function WelcomeScreen() {
       })
     ]).start();
   }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      console.error('Google login error:', err);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    try {
+      await loginWithApple();
+    } catch (err) {
+      console.error('Apple login error:', err);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -81,14 +99,27 @@ export default function WelcomeScreen() {
             </TouchableOpacity>
           </Link>
           
-          <TouchableOpacity style={styles.socialButton}>
-            <Apple size={20} color="#FFFFFF" />
-            <Text style={styles.socialButtonText}>Continue with Apple</Text>
+          <TouchableOpacity 
+            style={styles.socialButton}
+            onPress={handleAppleLogin}
+          >
+            <View style={styles.socialButtonContent}>
+              <Apple size={20} color="#FFFFFF" />
+              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            </View>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.socialButton}>
-            <X size={20} color="#FFFFFF" />
-            <Text style={styles.socialButtonText}>Continue with X</Text>
+          <TouchableOpacity 
+            style={[styles.socialButton, styles.googleButton]}
+            onPress={handleGoogleLogin}
+          >
+            <View style={styles.socialButtonContent}>
+              <Image 
+                source={{ uri: 'https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png' }}
+                style={styles.googleIcon}
+              />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </View>
           </TouchableOpacity>
           
           <Link href="/register" asChild>
@@ -205,18 +236,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     borderRadius: 16,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 20,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleButton: {
+    backgroundColor: '#1E1E1E',
   },
   socialButtonText: {
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
     marginLeft: 12,
+    flexShrink: 1,
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
   },
   textButton: {
     paddingVertical: 12,

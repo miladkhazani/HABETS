@@ -15,8 +15,9 @@ import {
   TouchableWithoutFeedback
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Apple, X } from 'lucide-react-native';
 import { useAuth } from '@/store/authStore';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -26,10 +27,12 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
+  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
   
+  const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
   
-  const { login } = useAuth();
+  const { login, loginWithApple, loginWithGoogle, loginWithX } = useAuth();
 
   useEffect(() => {
     Animated.parallel([
@@ -44,6 +47,11 @@ export default function LoginScreen() {
         useNativeDriver: true,
       })
     ]).start();
+
+    // Check if Apple authentication is available
+    AppleAuthentication.isAvailableAsync().then(
+      available => setIsAppleAuthAvailable(available)
+    );
   }, []);
 
   const handleLogin = async () => {
@@ -60,6 +68,32 @@ export default function LoginScreen() {
     } catch (err) {
       setError('Invalid email or password');
       console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: 'apple' | 'google' | 'x') => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      switch (provider) {
+        case 'apple':
+          await loginWithApple();
+          break;
+        case 'google':
+          await loginWithGoogle();
+          break;
+        case 'x':
+          await loginWithX();
+          break;
+      }
+      
+      router.replace('/(tabs)');
+    } catch (err) {
+      setError(`Failed to login with ${provider}`);
+      console.error(`${provider} login error:`, err);
     } finally {
       setIsLoading(false);
     }
@@ -116,6 +150,7 @@ export default function LoginScreen() {
               <View style={styles.inputContainer}>
                 <Mail size={20} color="#A0A0A0" style={styles.inputIcon} />
                 <TextInput
+                  ref={emailInputRef}
                   style={styles.input}
                   placeholder="Email"
                   placeholderTextColor="#808080"
@@ -125,7 +160,6 @@ export default function LoginScreen() {
                   onChangeText={setEmail}
                   editable={!isLoading}
                   returnKeyType="next"
-                  blurOnSubmit={false}
                   onSubmitEditing={() => {
                     passwordInputRef.current?.focus();
                   }}
@@ -180,6 +214,46 @@ export default function LoginScreen() {
                   {isLoading ? 'Logging in...' : 'Log In'}
                 </Text>
               </TouchableOpacity>
+
+              <View style={styles.dividerContainer}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>or continue with</Text>
+                <View style={styles.divider} />
+              </View>
+
+              <View style={styles.socialButtonsContainer}>
+                {Platform.OS === 'ios' && isAppleAuthAvailable && (
+                  <TouchableOpacity 
+                    style={styles.socialButton}
+                    onPress={() => handleSocialLogin('apple')}
+                    disabled={isLoading}
+                  >
+                    <Apple size={20} color="#FFFFFF" />
+                    <Text style={styles.socialButtonText}>Apple</Text>
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialLogin('google')}
+                  disabled={isLoading}
+                >
+                  <Image 
+                    source={{ uri: 'https://i.imgur.com/O9VfQxe.png' }}
+                    style={styles.googleIcon}
+                  />
+                  <Text style={styles.socialButtonText}>Google</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialLogin('x')}
+                  disabled={isLoading}
+                >
+                  <X size={20} color="#FFFFFF" />
+                  <Text style={styles.socialButtonText}>X</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             
             <View style={styles.footer}>
@@ -273,10 +347,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1E1E1E',
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 16,
     paddingHorizontal: 16,
-    height: 60,
+    height: 56,
     borderWidth: 1,
     borderColor: '#333333',
   },
@@ -288,7 +362,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#FFFFFF',
-    backgroundColor: 'transparent',
   },
   eyeIcon: {
     padding: 8,
@@ -305,7 +378,7 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: '#4DA8DA',
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   loginButtonDisabled: {
@@ -315,6 +388,48 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     fontSize: 16,
     color: '#FFFFFF',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#333333',
+  },
+  dividerText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    color: '#A0A0A0',
+    marginHorizontal: 16,
+  },
+  socialButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginHorizontal: 6,
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  socialButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
   },
   footer: {
     flexDirection: 'row',
