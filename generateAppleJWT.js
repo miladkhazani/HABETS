@@ -4,7 +4,7 @@ const fs = require("fs");
 // Replace with your actual values
 const teamId = "8ZJJB7FGT4";
 const keyId = "GS28425393";
-const clientId = "me.habets.auth"; // Your Service ID
+const clientId = "me.habets.app"; // Your Bundle ID
 const privateKeyPath = "./AuthKey_XXXXXXXXXX.p8";
 
 

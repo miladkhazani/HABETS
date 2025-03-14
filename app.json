@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "me.habets.app"
+      "bundleIdentifier": "me.habets.app",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "me.habets.app"

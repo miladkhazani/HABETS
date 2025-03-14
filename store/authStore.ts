@@ -74,13 +74,21 @@ export const useAuth = create<AuthState>((set, get) => ({
         ],
       });
 
+      console.log('Apple credential received:', {
+        ...credential,
+        identityToken: credential.identityToken ? 'present' : 'missing'
+      });
+
       if (credential.identityToken) {
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'apple',
           token: credential.identityToken,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase Apple auth error:', error);
+          throw error;
+        }
         
         if (data.user) {
           const { data: profile } = await supabase
@@ -124,6 +132,8 @@ export const useAuth = create<AuthState>((set, get) => ({
             isAuthenticated: true 
           });
         }
+      } else {
+        throw new Error('No identity token received from Apple');
       }
     } catch (error) {
       if (error.code === 'ERR_REQUEST_CANCELED') {
